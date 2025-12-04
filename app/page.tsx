@@ -103,9 +103,8 @@ export default function PolyLeverage() {
     <div className="flex h-screen bg-background text-foreground">
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-accent border-r border-zinc-800 transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:relative lg:translate-x-0`}
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-accent border-r border-zinc-800 transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } lg:relative lg:translate-x-0`}
       >
         <div className="p-6 border-b border-zinc-800">
           <div className="flex items-center gap-2">
@@ -125,12 +124,15 @@ export default function PolyLeverage() {
                 onClick={() => {
                   setCurrentPage(item.id as any)
                   setSidebarOpen(false)
+                  // Reset selected market when going to dashboard
+                  if (item.id === "dashboard") {
+                    setSelectedMarket(null)
+                  }
                 }}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  currentPage === item.id
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-card"
-                }`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${currentPage === item.id
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-card"
+                  }`}
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-sm font-medium">{item.label}</span>
@@ -143,7 +145,7 @@ export default function PolyLeverage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
-        <div className="h-16 border-b border-zinc-800 bg-card px-6 flex items-center justify-between">
+        <div className="h-[81px] border-b border-zinc-800 bg-card px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -292,11 +294,10 @@ export default function PolyLeverage() {
 
                     <Button
                       onClick={handlePlacePosition}
-                      className={`w-full h-12 font-semibold ${
-                        selectedTab === "long"
-                          ? "bg-primary hover:bg-primary/90 text-primary-foreground"
-                          : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                      }`}
+                      className={`w-full h-12 font-semibold ${selectedTab === "long"
+                        ? "bg-primary hover:bg-primary/90 text-primary-foreground"
+                        : "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
+                        }`}
                     >
                       Open Position
                     </Button>
