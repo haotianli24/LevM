@@ -176,7 +176,7 @@ export default function PolyLeverage() {
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <Zap className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold">PolyLeverage</span>
+            <span className="text-lg font-bold">LevM</span>
           </div>
         </div>
 
@@ -464,8 +464,8 @@ export default function PolyLeverage() {
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-bold">Recent Markets</h3>
-                <Button 
-                  onClick={fetchMarkets} 
+                <Button
+                  onClick={fetchMarkets}
                   disabled={loadingMarkets}
                   variant="outline"
                   size="sm"
@@ -482,37 +482,37 @@ export default function PolyLeverage() {
                   <p className="text-muted-foreground">No markets available</p>
                 </div>
               ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {markets.map((market) => (
-                  <Card
-                    key={market.id}
-                    className="bg-card border-zinc-800 p-4 cursor-pointer hover:border-primary/50 transition-colors"
-                    onClick={() => {
-                      setSelectedMarket(market)
-                      setCurrentPage("dashboard")
-                    }}
-                  >
-                    <p className="font-semibold text-sm mb-3">{market.name}</p>
-                    <div className="space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Liquidity</span>
-                        <span className="font-mono text-primary">{market.liquidity || 0}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {markets.map((market) => (
+                    <Card
+                      key={market.id}
+                      className="bg-card border-zinc-800 p-4 cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => {
+                        setSelectedMarket(market)
+                        setCurrentPage("dashboard")
+                      }}
+                    >
+                      <p className="font-semibold text-sm mb-3">{market.name}</p>
+                      <div className="space-y-2 text-xs">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Liquidity</span>
+                          <span className="font-mono text-primary">{market.liquidity || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Price</span>
+                          <span className="font-mono">${(market.oraclePrice || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">24h Change</span>
+                          <span className={`font-mono ${(market.change24h || 0) >= 0 ? "text-primary" : "text-secondary"}`}>
+                            {(market.change24h || 0) >= 0 ? "+" : ""}
+                            {(market.change24h || 0).toFixed(2)}%
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Price</span>
-                        <span className="font-mono">${(market.oraclePrice || 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">24h Change</span>
-                        <span className={`font-mono ${(market.change24h || 0) >= 0 ? "text-primary" : "text-secondary"}`}>
-                          {(market.change24h || 0) >= 0 ? "+" : ""}
-                          {(market.change24h || 0).toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+                    </Card>
+                  ))}
+                </div>
               )}
             </div>
           )}

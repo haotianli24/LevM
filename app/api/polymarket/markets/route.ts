@@ -27,13 +27,17 @@ export async function GET(request: NextRequest) {
     const headers: Record<string, string> = {
       'Accept': 'application/json',
     }
-    
+
     if (API_KEY) {
       headers['X-API-Key'] = API_KEY
     }
 
+    // Fetch more markets than requested to ensure we have enough after filtering
+    // Some markets might be filtered out or have low volume
+    const fetchLimit = Math.max(limit * 3, 50)
+
     const response = await fetch(
-      `${GAMMA_API_BASE}/markets?limit=${limit}&offset=${offset}&active=true&closed=false`,
+      `${GAMMA_API_BASE}/markets?limit=${fetchLimit}&offset=${offset}&active=true&closed=false`,
       {
         headers,
         cache: 'no-store'
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     const markets: PolymarketMarket[] = await response.json()
-    
+
     if (markets.length > 0) {
       console.log('Sample market structure:', {
         id: markets[0].id,
@@ -76,8 +80,8 @@ export async function GET(request: NextRequest) {
           }
         }
 
-        const yesPrice = outcomePrices && outcomePrices.length > 0 
-          ? parseFloat(outcomePrices[0]) 
+        const yesPrice = outcomePrices && outcomePrices.length > 0
+          ? parseFloat(outcomePrices[0])
           : 0.5
 
         const volume = market.volume ? parseFloat(market.volume) : 0
@@ -90,6 +94,7 @@ export async function GET(request: NextRequest) {
           name: market.question,
           oraclePrice: yesPrice,
           volume: volume,
+          volume24hr: volume, // Using total volume as 24hr volume approximation
           liquidity: plvScore,
           change24h: (Math.random() - 0.5) * 10,
           slug: market.marketSlug
