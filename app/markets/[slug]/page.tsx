@@ -13,7 +13,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts"
 import { useWallet } from '@solana/wallet-adapter-react'
 import { AppLayout } from "@/components/app-layout"
 import { Market, Position } from "@/lib/types"
-import { OrderBook } from "@/components/order-book"
+import { Orderbook } from "@/components/orderbook"
 import { PositionDetailDialog } from "@/components/position-detail-dialog"
 
 export default function MarketDetailPage() {
@@ -632,10 +632,9 @@ export default function MarketDetailPage() {
               })
               
               return (
-                <OrderBook 
-                  tokenId={tokenId} 
-                  outcome={outcome}
-                  currentPrice={currentPrice}
+                <Orderbook 
+                  assetIds={[tokenId]} 
+                  maxLevels={12}
                 />
               )
             })()}

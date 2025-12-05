@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Polymarket WebSocket Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+    .book { display: flex; gap: 40px; margin-top: 20px; }
+    .side { flex: 1; }
+    .side h3 { color: #8b5cf6; }
+    .level { padding: 5px; margin: 2px 0; background: #2a2a2a; border-radius: 3px; }
+    .bids { border-left: 3px solid #10b981; }
+    .asks { border-left: 3px solid #ef4444; }
+    #status { padding: 10px; background: #2a2a2a; border-radius: 5px; margin-bottom: 20px; }
+    .connected { color: #10b981; }
+    .disconnected { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>Polymarket WebSocket Orderbook Test</h1>
+  
+  <div id="status">Status: <span id="connection-status" class="disconnected">Disconnected</span></div>
+  
+  <div>
+    <label>Market Condition ID:</label>
+    <input id="market" type="text" style="width: 500px; padding: 5px; background: #2a2a2a; border: 1px solid #444; color: #fff;" 
+           placeholder="0x...">
+    <br><br>
+    <label>Token IDs (comma-separated):</label>
+    <input id="tokens" type="text" style="width: 500px; padding: 5px; background: #2a2a2a; border: 1px solid #444; color: #fff;" 
+           placeholder="123...,456...">
+    <br><br>
+    <button onclick="connect()" style="padding: 10px 20px; background: #8b5cf6; border: none; color: #fff; cursor: pointer; border-radius: 5px;">
+      Connect
+    </button>
+    <button onclick="disconnect()" style="padding: 10px 20px; background: #ef4444; border: none; color: #fff; cursor: pointer; border-radius: 5px;">
+      Disconnect
+    </button>
+  </div>
+
+  <div id="timestamp" style="margin-top: 20px; color: #888;"></div>
+
+  <div class="book">
+    <div class="side">
+      <h3>BIDS</h3>
+      <div id="bids"></div>
+    </div>
+    <div class="side">
+      <h3>ASKS</h3>
+      <div id="asks"></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 30px;">
+    <h3>Raw Events</h3>
+    <div id="events" style="background: #2a2a2a; padding: 10px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-size: 11px;"></div>
+  </div>
+
+  <script>
+    let eventSource = null
+
+    function connect() {
+      const market = document.getElementById('market').value.trim()
+      const tokens = document.getElementById('tokens').value.trim()
+
+      if (!market || !tokens) {
+        alert('Please enter market condition ID and token IDs')
+        return
+      }
+
+      disconnect()
+
+      const url = `/api/orderbook/stream?market=${encodeURIComponent(market)}&assetIds=${encodeURIComponent(tokens)}`
+      eventSource = new EventSource(url)
+
+      document.getElementById('connection-status').textContent = 'Connecting...'
+      document.getElementById('connection-status').className = 'disconnected'
+
+      eventSource.onopen = () => {
+        document.getElementById('connection-status').textContent = 'Connected'
+        document.getElementById('connection-status').className = 'connected'
+        addEvent('Connected to stream')
+      }
+
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          handleMessage(data)
+        } catch (e) {
+          console.error('Parse error:', e)
+        }
+      }
+
+      eventSource.onerror = () => {
+        document.getElementById('connection-status').textContent = 'Disconnected'
+        document.getElementById('connection-status').className = 'disconnected'
+        addEvent('Connection error')
+      }
+    }
+
+    function disconnect() {
+      if (eventSource) {
+        eventSource.close()
+        eventSource = null
+        document.getElementById('connection-status').textContent = 'Disconnected'
+        document.getElementById('connection-status').className = 'disconnected'
+      }
+    }
+
+    function handleMessage(data) {
+      addEvent(`${data.event_type} event: ${JSON.stringify(data).substring(0, 100)}...`)
+
+      if (data.event_type === 'book') {
+        renderBook(data.bids, data.asks)
+        document.getElementById('timestamp').textContent = 
+          `Last update: ${new Date(parseInt(data.timestamp)).toLocaleTimeString()}`
+      } else if (data.event_type === 'price_change') {
+        document.getElementById('timestamp').textContent = 
+          `Price change: ${new Date(parseInt(data.timestamp)).toLocaleTimeString()}`
+      }
+    }
+
+    function renderBook(bids, asks) {
+      const bidsDiv = document.getElementById('bids')
+      const asksDiv = document.getElementById('asks')
+
+      bidsDiv.innerHTML = bids.slice(0, 10).map(level => 
+        `<div class="level bids">${level.price} - ${level.size}</div>`
+      ).join('')
+
+      asksDiv.innerHTML = asks.slice(0, 10).map(level => 
+        `<div class="level asks">${level.price} - ${level.size}</div>`
+      ).join('')
+    }
+
+    function addEvent(msg) {
+      const eventsDiv = document.getElementById('events')
+      const time = new Date().toLocaleTimeString()
+      eventsDiv.innerHTML = `<div>[${time}] ${msg}</div>` + eventsDiv.innerHTML
+    }
+  </script>
+</body>
+</html>
