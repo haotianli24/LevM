@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js'
+import { depositStore } from '@/lib/deposit-store'
 
 // Central deposit address
 const DEPOSIT_ADDRESS = 'CXi538rhqgJx56Edrqg1HMmZK4xfKgTDz7r2df4CnJQL'
@@ -22,6 +23,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Fetch user's REAL deposits from Solana blockchain
     console.log('Fetching deposits from blockchain for user:', address)
 
     const connection = new Connection(RPC_URL, 'confirmed')
@@ -81,21 +83,31 @@ export async function GET(request: NextRequest) {
     }
 
     const totalDepositsUSDC = totalDepositsSOL * SOL_TO_USDC_RATE
+    
+    // Get used amount from deposit store
+    const usedAmount = depositStore.getUsedAmount(address)
+    const availableBalance = Math.max(0, totalDepositsUSDC - usedAmount)
 
     console.log('User deposit balance fetched from blockchain:', {
       address,
       depositCount: deposits.length,
       totalDepositsSOL,
       totalDepositsUSDC,
+      usedAmount,
+      availableBalance,
       deposits: deposits.map(d => ({ signature: d.signature, amount: d.amount }))
     })
 
+    // Note: Positions are simulated/demo, but balance is REAL from deposits
     return NextResponse.json({
       success: true,
       address,
       totalDepositsSOL,
       totalDepositsUSDC,
-      deposits
+      usedAmount,
+      availableBalance,
+      deposits,
+      note: 'Balance is from real Solana deposits. Positions are simulated (no actual Polymarket orders).'
     })
 
   } catch (error) {

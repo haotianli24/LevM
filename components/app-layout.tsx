@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { TrendingUp, Wallet, Coins, Menu, X, Zap } from "lucide-react"
+import { TrendingUp, Wallet, Coins, Menu, X } from "lucide-react"
 import WalletMultiButton from '@/components/wallet-button'
 import Link from "next/link"
+import Image from "next/image"
 
 const navItems = [
   { id: "markets", label: "Markets", icon: TrendingUp, path: "/markets" },
@@ -24,12 +25,16 @@ export function AppLayout({ children, title }: { children: React.ReactNode; titl
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } lg:relative lg:translate-x-0`}
       >
-        <div className="p-6 border-b border-zinc-800">
-          <Link href="/markets" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-bold">LevM</span>
+        <div className="h-[81px] px-6 border-b border-zinc-800 flex items-center">
+          <Link href="/markets" className="flex items-center">
+            <Image 
+              src="/levm-logo.png" 
+              alt="LevM Logo" 
+              width={120} 
+              height={40}
+              className="h-10 w-auto"
+              priority
+            />
           </Link>
         </div>
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { positionStore } from '@/lib/position-store'
+import { hybridPositionStore } from '@/lib/hybrid-position-store'
+import { depositStore } from '@/lib/deposit-store'
 import { LiquidationEngine } from '@/lib/liquidation-engine'
 
 export async function POST(request: NextRequest) {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const position = positionStore.getPosition(positionId)
+    const position = hybridPositionStore.getPosition(positionId)
 
     if (!position) {
       return NextResponse.json(
@@ -44,7 +45,22 @@ export async function POST(request: NextRequest) {
 
     const finalBalance = position.collateral + pnl
 
-    positionStore.closePosition(positionId)
+    // Return funds to user's available balance
+    // Return the final balance (collateral + PnL), but at least 0
+    const returnAmount = Math.max(0, finalBalance)
+    depositStore.returnBalance(userAddress, returnAmount)
+
+    console.log('[API] Position closed - Returning funds:', {
+      positionId,
+      userAddress,
+      collateral: position.collateral,
+      pnl,
+      finalBalance,
+      returnAmount
+    })
+
+    // Close position in hybrid store (updates both local and on-chain)
+    await hybridPositionStore.closePosition(positionId)
 
     return NextResponse.json({
       success: true,
@@ -53,8 +69,9 @@ export async function POST(request: NextRequest) {
         status: 'closed',
       },
       pnl,
-      finalBalance: Math.max(0, finalBalance),
-      message: `Position closed at $${position.currentPrice.toFixed(4)}`,
+      finalBalance: returnAmount,
+      isDemo: true,
+      message: `Position closed at $${position.currentPrice.toFixed(4)}. ${returnAmount > 0 ? `$${returnAmount.toFixed(2)} returned to your balance.` : 'Position liquidated.'}`,
     })
 
   } catch (error) {

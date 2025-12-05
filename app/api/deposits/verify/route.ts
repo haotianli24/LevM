@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { solanaDepositService } from '@/lib/solana-deposit'
+import { depositStore } from '@/lib/deposit-store'
 
 // Central deposit address - SOL deposits are sent to this address
 const DEPOSIT_ADDRESS_STRING = "CXi538rhqgJx56Edrqg1HMmZK4xfKgTDz7r2df4CnJQL"
+
+// Generate a simulated Polygon address for a user
+function generateSimulatedPolygonAddress(solanaAddress: string): string {
+  // Create a deterministic "Polygon" address based on Solana address
+  // This is just for UI purposes - not a real Polygon address
+  const hash = solanaAddress.slice(0, 8)
+  return `0x${hash}${'0'.repeat(32)}` // Simulated Polygon address format
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,13 +60,35 @@ export async function POST(request: NextRequest) {
 
     console.log(`Deposit verified: ${signature} - ${details.amount} SOL from ${userAddress} to ${DEPOSIT_ADDRESS_STRING}`)
 
+    // Simulate Polygon bridge for the user
+    const simulatedPolygonAddress = generateSimulatedPolygonAddress(userAddress)
+    const simulatedBridgeTxHash = `0xsimulated_${signature.slice(0, 16)}`
+    
+    // Store simulated bridge info (this would be in a database in production)
+    depositStore.recordSimulatedBridge(userAddress, {
+      polygonAddress: simulatedPolygonAddress,
+      bridgeTxHash: simulatedBridgeTxHash,
+      amount: details.amount,
+      timestamp: details.timestamp
+    })
+
+    console.log(`Simulated Polygon bridge created for ${userAddress}:`, {
+      polygonAddress: simulatedPolygonAddress,
+      bridgeTxHash: simulatedBridgeTxHash
+    })
+
     return NextResponse.json({
       success: true,
       verified: true,
       amount: details.amount,
       timestamp: details.timestamp,
       signature,
-      message: `Deposit of ${details.amount.toFixed(4)} SOL confirmed on blockchain`
+      message: `Deposit of ${details.amount.toFixed(4)} SOL confirmed on blockchain`,
+      simulatedBridge: {
+        polygonAddress: simulatedPolygonAddress,
+        bridgeTxHash: simulatedBridgeTxHash,
+        note: 'Polygon bridge simulated - leveraged positions are paper trading only'
+      }
     })
 
   } catch (error) {

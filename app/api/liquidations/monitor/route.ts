@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { positionStore } from '@/lib/position-store'
+import { hybridPositionStore } from '@/lib/hybrid-position-store'
 import { LiquidationEngine } from '@/lib/liquidation-engine'
 
 export async function GET(request: NextRequest) {
   try {
-    const allPositions = positionStore.getAllActivePositions()
+    const allPositions = hybridPositionStore.getAllActivePositions()
     const atRiskPositions = []
     const healthyPositions = []
 

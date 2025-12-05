@@ -14,6 +14,7 @@ import { useWallet } from '@solana/wallet-adapter-react'
 import { AppLayout } from "@/components/app-layout"
 import { Market, Position } from "@/lib/types"
 import { OrderBook } from "@/components/order-book"
+import { PositionDetailDialog } from "@/components/position-detail-dialog"
 
 export default function MarketDetailPage() {
   const router = useRouter()
@@ -46,6 +47,8 @@ export default function MarketDetailPage() {
   const [isEvent, setIsEvent] = useState(false)
   const [submarkets, setSubmarkets] = useState<any[]>([])
   const [selectedSubmarket, setSelectedSubmarket] = useState<any | null>(null)
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null)
+  const [isPositionDialogOpen, setIsPositionDialogOpen] = useState(false)
 
   // Generate market price history data (deterministic)
   const generateMarketPriceData = useMemo(() => {
@@ -128,9 +131,7 @@ export default function MarketDetailPage() {
           if (eventData.submarkets && eventData.submarkets.length > 0) {
             const firstSubmarket = eventData.submarkets[0]
             setSelectedSubmarket(firstSubmarket)
-            const priceInCents = (firstSubmarket.yesPrice * 100).toFixed(2)
-            console.log('Setting limit price from submarket:', { yesPrice: firstSubmarket.yesPrice, priceInCents })
-            setMarketLimitPrice(priceInCents)
+            setMarketLimitPrice((firstSubmarket.yesPrice * 100).toFixed(1))
             setSelectedPriceOption(firstSubmarket.yesPrice >= 0.5 ? "yes" : "no")
           }
           
@@ -174,9 +175,7 @@ export default function MarketDetailPage() {
         
         setIsEvent(false)
         setMarket(data)
-        const priceInCents = (data.oraclePrice * 100).toFixed(2)
-        console.log('Setting limit price from market:', { oraclePrice: data.oraclePrice, priceInCents })
-        setMarketLimitPrice(priceInCents)
+        setMarketLimitPrice((data.oraclePrice * 100).toFixed(1))
         const yesPrice = data.oraclePrice * 100
         const noPrice = (1 - data.oraclePrice) * 100
         setSelectedPriceOption(yesPrice >= noPrice ? "yes" : "no")
@@ -194,28 +193,72 @@ export default function MarketDetailPage() {
     fetchMarket()
   }, [slug, router, toast])
 
+  const fetchLeveragedPositions = async () => {
+    if (!publicKey) {
+      console.log('⚠️ [CLIENT] fetchLeveragedPositions: No publicKey, skipping')
+      return
+    }
+
+    console.log('📥 [CLIENT] Fetching leveraged positions for:', publicKey.toString())
+    setLoadingPositions(true)
+    try {
+      const url = `/api/positions/list?userAddress=${encodeURIComponent(publicKey.toString())}`
+      console.log('📥 [CLIENT] Fetching from:', url)
+      
+      const response = await fetch(url)
+      console.log('📥 [CLIENT] Response status:', response.status)
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('📥 [CLIENT] Positions received:', data.positions?.length || 0, 'positions')
+        console.log('📥 [CLIENT] All positions:', data.positions)
+        setPositions(data.positions || [])
+      } else {
+        console.error('❌ [CLIENT] Failed to fetch positions:', response.status)
+      }
+    } catch (error) {
+      console.error('❌ [CLIENT] Error fetching positions:', error)
+    } finally {
+      setLoadingPositions(false)
+      console.log('📥 [CLIENT] fetchLeveragedPositions complete')
+    }
+  }
+
   useEffect(() => {
     if (market && connected && publicKey) {
       fetchLeveragedPositions()
     }
   }, [market, connected, publicKey])
 
-  const fetchLeveragedPositions = async () => {
-    if (!publicKey) return
-
-    setLoadingPositions(true)
-    try {
-      const response = await fetch(`/api/positions/list?userAddress=${encodeURIComponent(publicKey.toString())}`)
-      if (response.ok) {
-        const data = await response.json()
-        setPositions(data.positions || [])
-      }
-    } catch (error) {
-      console.error('Error fetching positions:', error)
-    } finally {
-      setLoadingPositions(false)
+  // Debug log for positions - calculate marketPositions safely
+  const marketPositions = useMemo(() => {
+    if (!market) return []
+    
+    // For events with submarkets, also check if positions match any submarket IDs
+    const marketIds = [market.id]
+    if (isEvent && submarkets.length > 0) {
+      submarkets.forEach(sub => marketIds.push(sub.id))
     }
-  }
+    
+    console.log('🔍 [CLIENT] Filtering positions with market IDs:', marketIds)
+    console.log('🔍 [CLIENT] Available position marketIds:', positions.map(p => p.marketId))
+    
+    return positions.filter(pos => marketIds.includes(pos.marketId))
+  }, [positions, market, isEvent, submarkets])
+
+  useEffect(() => {
+    if (positions.length > 0 && market) {
+      console.log('🔍 [CLIENT] Total positions loaded:', positions.length)
+      console.log('🔍 [CLIENT] Current market ID:', market.id)
+      console.log('🔍 [CLIENT] Is event?:', isEvent)
+      console.log('🔍 [CLIENT] Submarkets count:', submarkets.length)
+      if (submarkets.length > 0) {
+        console.log('🔍 [CLIENT] Submarket IDs:', submarkets.map(s => s.id))
+      }
+      console.log('🔍 [CLIENT] Market positions for this market:', marketPositions.length)
+      console.log('🔍 [CLIENT] Market positions:', marketPositions)
+    }
+  }, [positions, market, marketPositions, isEvent, submarkets])
 
   const handleClosePosition = async (positionId: string) => {
     if (!connected || !publicKey) {
@@ -369,8 +412,6 @@ export default function MarketDetailPage() {
     )
   }
 
-  const marketPositions = positions.filter(pos => pos.marketId === market.id)
-
   return (
     <AppLayout title={market.name}>
       <div className="space-y-6">
@@ -423,9 +464,7 @@ export default function MarketDetailPage() {
                   }`}
                   onClick={() => {
                     setSelectedSubmarket(submarket)
-                    const priceInCents = (submarket.yesPrice * 100).toFixed(2)
-                    console.log('Setting limit price from submarket selection:', { yesPrice: submarket.yesPrice, priceInCents })
-                    setMarketLimitPrice(priceInCents)
+                    setMarketLimitPrice((submarket.yesPrice * 100).toFixed(1))
                     setSelectedPriceOption(submarket.yesPrice >= 0.5 ? "yes" : "no")
                   }}
                 >
@@ -679,9 +718,7 @@ export default function MarketDetailPage() {
                     const price = isEvent && selectedSubmarket 
                       ? selectedSubmarket.yesPrice 
                       : market.oraclePrice
-                    const priceInCents = (price * 100).toFixed(2)
-                    console.log('Setting YES price:', { price, priceInCents })
-                    setMarketLimitPrice(priceInCents)
+                    setMarketLimitPrice((price * 100).toFixed(1))
                     setSelectedPriceOption("yes")
                   }}
                 >
@@ -701,9 +738,7 @@ export default function MarketDetailPage() {
                     const price = isEvent && selectedSubmarket 
                       ? selectedSubmarket.noPrice 
                       : (1 - market.oraclePrice)
-                    const priceInCents = (price * 100).toFixed(2)
-                    console.log('Setting NO price:', { price, priceInCents })
-                    setMarketLimitPrice(priceInCents)
+                    setMarketLimitPrice((price * 100).toFixed(1))
                     setSelectedPriceOption("no")
                   }}
                 >
@@ -780,45 +815,25 @@ export default function MarketDetailPage() {
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Position Size</span>
                   <span className="font-mono">
-                    ${(() => {
-                      const priceInDollars = Number.parseFloat(marketLimitPrice || "0") / 100
-                      const shares = Number.parseInt(marketShares || "0")
-                      // Position size is collateral * leverage
-                      const collateral = priceInDollars * shares
-                      const positionSize = collateral * marketLeverage
-                      console.log('Position Size calc:', { collateral, marketLeverage, positionSize })
-                      return positionSize.toFixed(2)
-                    })()}
+                    ${((Number.parseFloat(marketLimitPrice || "0") / 100) * Number.parseInt(marketShares || "0")).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Collateral Required</span>
                   <span className="font-mono">
-                    ${(() => {
-                      const priceInDollars = Number.parseFloat(marketLimitPrice || "0") / 100
-                      const shares = Number.parseInt(marketShares || "0")
-                      // Collateral is what you need to put up (shares * price, no leverage division)
-                      const collateral = priceInDollars * shares
-                      console.log('Collateral calc:', { marketLimitPrice, priceInDollars, shares, collateral })
-                      return collateral.toFixed(2)
-                    })()}
+                    ${((Number.parseFloat(marketLimitPrice || "0") / 100) * Number.parseInt(marketShares || "0") / marketLeverage).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">To Win</span>
                   <span className="font-mono text-primary">
-                    ${(() => {
-                      const shares = Number.parseInt(marketShares || "0")
-                      const effectiveShares = shares * marketLeverage
-                      const toWin = effectiveShares * (1 - Number.parseFloat(marketLimitPrice || "0") / 100)
-                      return toWin.toFixed(2)
-                    })()}
+                    ${(Number.parseInt(marketShares || "0") * (1 - Number.parseFloat(marketLimitPrice || "0") / 100)).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Liquidation Price</span>
                   <span className="font-mono text-red-400">
-                    {(Number.parseFloat(marketLimitPrice || "0") * (1 - 1/marketLeverage)).toFixed(2)}¢
+                    {(Number.parseFloat(marketLimitPrice || "0") * (1 - 1/marketLeverage)).toFixed(1)}¢
                   </span>
                 </div>
               </div>
@@ -833,9 +848,7 @@ export default function MarketDetailPage() {
 
                     const shares = Number.parseInt(marketShares)
                     const limitPrice = Number.parseFloat(marketLimitPrice || "0") / 100
-                    // Collateral is what you put up (shares * price)
-                    // Leverage multiplies your position size, not reduces your collateral
-                    const collateralAmount = limitPrice * shares
+                    const collateralAmount = (limitPrice * shares) / marketLeverage
 
                     if (shares <= 0 || collateralAmount <= 0) {
                       toast({
@@ -846,6 +859,7 @@ export default function MarketDetailPage() {
                       return
                     }
 
+                    console.log('🎯 [CLIENT] Starting position creation...')
                     setCreatingPosition(true)
                     try {
                       const side = marketSide === "buy" ? "long" : "short"
@@ -856,6 +870,17 @@ export default function MarketDetailPage() {
                         ? `${market.name} - ${selectedSubmarket.name}` 
                         : market.name
                       
+                      console.log('🎯 [CLIENT] Request params:', {
+                        marketId: targetMarketId,
+                        marketName: targetMarketName,
+                        side,
+                        entryPrice: limitPrice,
+                        collateral: collateralAmount,
+                        leverage: marketLeverage,
+                        userAddress: publicKey.toString(),
+                      })
+                      
+                      console.log('🎯 [CLIENT] Sending POST to /api/positions/create...')
                       const response = await fetch('/api/positions/create', {
                         method: 'POST',
                         headers: {
@@ -873,22 +898,33 @@ export default function MarketDetailPage() {
                         }),
                       })
 
+                      console.log('🎯 [CLIENT] Fetch completed, response status:', response.status)
+
                       if (!response.ok) {
+                        console.error('❌ [CLIENT] Response not OK:', response.status)
                         const errorData = await response.json().catch(() => ({}))
+                        console.error('❌ [CLIENT] Error data:', errorData)
                         throw new Error(errorData.error || 'Failed to create position')
                       }
 
+                      console.log('🎯 [CLIENT] Parsing response JSON...')
                       const data = await response.json()
+                      console.log('✅ [CLIENT] Response data:', data)
+                      
                       toast({
                         title: "Position Opened",
                         description: data.message || `${side.toUpperCase()} position created`,
                       })
 
+                      console.log('🎯 [CLIENT] Fetching updated positions...')
                       await fetchLeveragedPositions()
+                      console.log('✅ [CLIENT] Positions refreshed')
+                      
                       setMarketShares("")
                       setMarketLimitPrice("")
+                      console.log('✅ [CLIENT] Position creation complete!')
                     } catch (error) {
-                      console.error('Error creating position:', error)
+                      console.error('❌ [CLIENT] Error creating position:', error)
                       toast({
                         title: "Error",
                         description: error instanceof Error ? error.message : "Failed to create position",
@@ -1001,7 +1037,14 @@ export default function MarketDetailPage() {
                       const pnl = calculatePnL(pos)
                       const pnlAmount = pos.pnl ?? 0
                       return (
-                        <tr key={pos.id} className="border-b border-zinc-800 hover:bg-accent/50">
+                        <tr 
+                          key={pos.id} 
+                          className="border-b border-zinc-800 hover:bg-accent/50 cursor-pointer"
+                          onClick={() => {
+                            setSelectedPosition(pos)
+                            setIsPositionDialogOpen(true)
+                          }}
+                        >
                           <td className="py-4 px-4 font-mono text-sm">
                             <span className={`font-bold ${pos.side === "long" ? "text-primary" : "text-secondary"}`}>
                               {pos.side.toUpperCase()}
@@ -1032,7 +1075,10 @@ export default function MarketDetailPage() {
                           <td className="py-4 px-4">
                             {pos.status === "active" && (
                               <Button
-                                onClick={() => handleClosePosition(pos.id)}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleClosePosition(pos.id)
+                                }}
                                 disabled={closingPositionId === pos.id}
                                 variant="outline"
                                 size="sm"
@@ -1052,7 +1098,20 @@ export default function MarketDetailPage() {
           </Card>
         )}
       </div>
+
+      {/* Position Detail Dialog */}
+      <PositionDetailDialog
+        position={selectedPosition}
+        isOpen={isPositionDialogOpen}
+        onClose={() => {
+          setIsPositionDialogOpen(false)
+          setSelectedPosition(null)
+        }}
+        onClosePosition={handleClosePosition}
+        closingPositionId={closingPositionId}
+      />
     </AppLayout>
   )
 }
+
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { positionStore } from '@/lib/position-store'
+import { hybridPositionStore } from '@/lib/hybrid-position-store'
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,12 +20,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const allPositions = positionStore.getAllActivePositions()
+    const allPositions = hybridPositionStore.getAllActivePositions()
     const updatedPositions = allPositions.filter(p => p.marketId === marketId)
 
     let updated = 0
     for (const position of updatedPositions) {
-      const success = positionStore.updatePosition(position.id, {
+      const success = await hybridPositionStore.updatePosition(position.id, {
         currentPrice: newPrice,
       })
       if (success) updated++

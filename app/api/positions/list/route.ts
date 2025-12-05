@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { positionStore } from '@/lib/position-store'
+import { hybridPositionStore } from '@/lib/hybrid-position-store'
 import { LiquidationEngine } from '@/lib/liquidation-engine'
 
 export async function GET(request: NextRequest) {
@@ -14,7 +14,16 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const positions = positionStore.getUserPositions(userAddress)
+    console.log('[API] Fetching positions for user:', userAddress)
+
+    // Fetch positions from hybrid store (checks local and on-chain)
+    const positions = await hybridPositionStore.getUserPositions(userAddress)
+    
+    console.log('[API] Found positions:', {
+      count: positions.length,
+      positionIds: positions.map(p => p.id),
+      userAddress
+    })
 
     const enrichedPositions = positions.map(position => {
       const marginRatio = LiquidationEngine.calculateMarginRatio(
@@ -47,15 +56,26 @@ export async function GET(request: NextRequest) {
       }
     })
 
+    console.log('[API] Returning enriched positions:', {
+      count: enrichedPositions.length,
+      positions: enrichedPositions.map(p => ({
+        id: p.id,
+        market: p.marketName,
+        side: p.side,
+        status: p.status
+      }))
+    })
+
     return NextResponse.json({
       positions: enrichedPositions,
       total: enrichedPositions.length,
+      source: 'hybrid-store',
     })
 
   } catch (error) {
-    console.error('Error listing positions:', error)
+    console.error('[API] Error listing positions:', error)
     return NextResponse.json(
-      { error: 'Failed to list positions' },
+      { error: 'Failed to list positions', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

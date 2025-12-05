@@ -13,21 +13,40 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const orderBook = await polymarketCLOB.getOrderBook(tokenId)
+    console.log('Fetching order book for token:', tokenId)
 
-    console.log('Order Book API Response:', {
-      tokenId,
-      bidsCount: orderBook.bids?.length || 0,
-      asksCount: orderBook.asks?.length || 0,
-      firstBid: orderBook.bids?.[0],
-      firstAsk: orderBook.asks?.[0],
-      raw: orderBook
-    })
+    try {
+      const orderBook = await polymarketCLOB.getOrderBook(tokenId)
 
-    return NextResponse.json({
-      success: true,
-      orderBook
-    })
+      console.log('Order Book API Response:', {
+        tokenId,
+        bidsCount: orderBook.bids?.length || 0,
+        asksCount: orderBook.asks?.length || 0,
+        firstBid: orderBook.bids?.[0],
+        firstAsk: orderBook.asks?.[0],
+      })
+
+      return NextResponse.json({
+        success: true,
+        orderBook
+      })
+    } catch (clobError) {
+      console.error('CLOB API Error:', {
+        tokenId,
+        error: clobError instanceof Error ? clobError.message : String(clobError),
+        stack: clobError instanceof Error ? clobError.stack : undefined
+      })
+      
+      // Return empty order book instead of error to prevent UI from breaking
+      return NextResponse.json({
+        success: true,
+        orderBook: {
+          bids: [],
+          asks: [],
+          error: 'Order book temporarily unavailable'
+        }
+      })
+    }
 
   } catch (error) {
     console.error('Error getting order book:', error)

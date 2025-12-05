@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { positionStore } from '@/lib/position-store'
+import { hybridPositionStore } from '@/lib/hybrid-position-store'
 import { LiquidationEngine, LiquidationResult } from '@/lib/liquidation-engine'
 
 export async function POST(request: NextRequest) {
   try {
-    const allPositions = positionStore.getAllActivePositions()
+    const allPositions = hybridPositionStore.getAllActivePositions()
     const liquidations: LiquidationResult[] = []
     const errors: string[] = []
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
             position.currentPrice
           )
 
-          positionStore.liquidatePosition(position.id)
+          await hybridPositionStore.liquidatePosition(position.id)
           liquidations.push(liquidationResult)
 
           console.log(`Liquidated position ${position.id} at $${position.currentPrice.toFixed(4)}`)

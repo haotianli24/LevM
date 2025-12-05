@@ -1,0 +1,12 @@
+{
+  "deposits": {},
+  "userDeposits": {},
+  "depositUsage": {
+    "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke": {
+      "userAddress": "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke",
+      "usedAmount": 280.75,
+      "lastUpdated": "2025-12-05T21:49:04.511Z"
+    }
+  },
+  "simulatedBridges": {}
+}

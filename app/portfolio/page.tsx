@@ -15,6 +15,7 @@ import WalletMultiButton from '@/components/wallet-button'
 import { AppLayout } from "@/components/app-layout"
 import { Position } from "@/lib/types"
 import { PolymarketLinkDialog } from "@/components/polymarket-link-dialog"
+import { PositionDetailDialog } from "@/components/position-detail-dialog"
 
 // Central deposit address - SOL deposits are sent to this address
 const DEPOSIT_ADDRESS_STRING = "CXi538rhqgJx56Edrqg1HMmZK4xfKgTDz7r2df4CnJQL"
@@ -50,8 +51,12 @@ export default function PortfolioPage() {
   const [verifyingDeposit, setVerifyingDeposit] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
   const [depositBalanceUSDC, setDepositBalanceUSDC] = useState(0)
+  const [availableBalanceUSDC, setAvailableBalanceUSDC] = useState(0)
+  const [usedBalanceUSDC, setUsedBalanceUSDC] = useState(0)
   const [pnlTimeframe, setPnlTimeframe] = useState<"24h" | "7d" | "30d">("24h")
   const [positionsTab, setPositionsTab] = useState<"leveraged" | "polymarket">("leveraged")
+  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null)
+  const [isPositionDialogOpen, setIsPositionDialogOpen] = useState(false)
   const [dateJoined] = useState(() => {
     const daysAgo = Math.floor(Math.random() * 335) + 30
     const date = new Date()
@@ -120,15 +125,18 @@ export default function PortfolioPage() {
   // Recalculate wallet balance whenever positions or deposits change
   useEffect(() => {
     const polymarketBalance = userPositions.reduce((sum: number, pos: any) => sum + (parseFloat(pos.size) || 0), 0)
-    const totalBalance = polymarketBalance + depositBalanceUSDC
+    // Use available balance instead of total deposits for wallet balance calculation
+    const totalBalance = polymarketBalance + availableBalanceUSDC
     console.log('Wallet balance calculation:', {
       polymarketBalance,
       depositBalanceUSDC,
+      availableBalanceUSDC,
+      usedBalanceUSDC,
       totalBalance,
       userPositionsCount: userPositions.length
     })
     setWalletBalance(totalBalance)
-  }, [userPositions, depositBalanceUSDC])
+  }, [userPositions, depositBalanceUSDC, availableBalanceUSDC, usedBalanceUSDC])
 
   const fetchLeveragedPositions = async () => {
     if (!publicKey) return
@@ -218,13 +226,19 @@ export default function PortfolioPage() {
         console.log('Deposit balance fetched:', {
           totalDepositsSOL: data.totalDepositsSOL,
           totalDepositsUSDC: data.totalDepositsUSDC,
+          usedAmount: data.usedAmount,
+          availableBalance: data.availableBalance,
           depositCount: data.deposits?.length || 0,
           deposits: data.deposits,
           address: data.address
         })
         const newBalance = data.totalDepositsUSDC || 0
-        console.log(`Setting depositBalanceUSDC to: ${newBalance} USDC (${data.totalDepositsSOL || 0} SOL)`)
+        const newAvailable = data.availableBalance || 0
+        const newUsed = data.usedAmount || 0
+        console.log(`Setting balances - Total: ${newBalance} USDC, Available: ${newAvailable} USDC, Used: ${newUsed} USDC (${data.totalDepositsSOL || 0} SOL)`)
         setDepositBalanceUSDC(newBalance)
+        setAvailableBalanceUSDC(newAvailable)
+        setUsedBalanceUSDC(newUsed)
       } else {
         const errorData = await response.json().catch(() => ({}))
         console.error('Failed to fetch deposit balance:', {
@@ -572,7 +586,7 @@ export default function PortfolioPage() {
                           await fetchUserPositions()
                           toast({
                             title: "Balance Refreshed",
-                            description: `Deposits: ${(depositBalanceUSDC / 150).toFixed(4)} SOL`,
+                            description: `Available: ${availableBalanceUSDC.toFixed(2)} USDC`,
                           })
                         }}
                         variant="ghost"
@@ -586,8 +600,18 @@ export default function PortfolioPage() {
                       ${walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      USDC {depositBalanceUSDC > 0 && `(${(depositBalanceUSDC / 150).toFixed(4)} SOL deposited)`}
+                      Available: ${availableBalanceUSDC.toFixed(2)} USDC
                     </p>
+                    {usedBalanceUSDC > 0 && (
+                      <p className="text-xs text-yellow-500 mt-1">
+                        In positions: ${usedBalanceUSDC.toFixed(2)} USDC
+                      </p>
+                    )}
+                    {depositBalanceUSDC > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Total deposited: {(depositBalanceUSDC / 150).toFixed(4)} SOL (${depositBalanceUSDC.toFixed(2)} USDC)
+                      </p>
+                    )}
                     {depositBalanceUSDC === 0 && (
                       <p className="text-xs text-yellow-500 mt-1">
                         No deposits found. If you deposited, verify the transaction.
@@ -811,6 +835,7 @@ export default function PortfolioPage() {
               {/* Leveraged Positions Tab */}
               {positionsTab === "leveraged" && (
                 <>
+                  
                   {loadingPositions ? (
                     <p className="text-center py-8 text-muted-foreground">Loading positions...</p>
                   ) : positions.length === 0 ? (
@@ -836,7 +861,14 @@ export default function PortfolioPage() {
                             const pnl = calculatePnL(pos)
                             const pnlAmount = pos.pnl ?? 0
                             return (
-                              <tr key={pos.id} className="border-b border-zinc-800 hover:bg-accent/50">
+                              <tr 
+                                key={pos.id} 
+                                className="border-b border-zinc-800 hover:bg-accent/50 cursor-pointer"
+                                onClick={() => {
+                                  setSelectedPosition(pos)
+                                  setIsPositionDialogOpen(true)
+                                }}
+                              >
                                 <td className="py-4 px-4 font-mono text-xs truncate max-w-[200px]" title={pos.marketName}>
                                   {pos.marketName}
                                 </td>
@@ -868,7 +900,10 @@ export default function PortfolioPage() {
                                 <td className="py-4 px-4">
                                   {pos.status === "active" && (
                                     <Button
-                                      onClick={() => handleClosePosition(pos.id)}
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleClosePosition(pos.id)
+                                      }}
                                       disabled={closingPositionId === pos.id}
                                       variant="outline"
                                       size="sm"
@@ -994,6 +1029,18 @@ export default function PortfolioPage() {
           </>
         )}
       </div>
+
+      {/* Position Detail Dialog */}
+      <PositionDetailDialog
+        position={selectedPosition}
+        isOpen={isPositionDialogOpen}
+        onClose={() => {
+          setIsPositionDialogOpen(false)
+          setSelectedPosition(null)
+        }}
+        onClosePosition={handleClosePosition}
+        closingPositionId={closingPositionId}
+      />
     </AppLayout>
   )
 }

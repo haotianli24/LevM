@@ -1,0 +1,108 @@
+{
+  "positions": {
+    "pos_1764970310487_qh6hr5t7r": {
+      "id": "pos_1764970310487_qh6hr5t7r",
+      "marketId": "797327",
+      "marketName": "Will Trump release Epstein files by...?  - December 19",
+      "side": "long",
+      "entryPrice": 0.575,
+      "currentPrice": 0.575,
+      "collateral": 57.49999999999999,
+      "leverage": 10,
+      "liquidationPrice": 0.5175,
+      "maintenanceMargin": null,
+      "userAddress": "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke",
+      "createdAt": "2025-12-05T21:31:50.487Z",
+      "status": "active"
+    },
+    "pos_1764970377407_nbpfedh8k": {
+      "id": "pos_1764970377407_nbpfedh8k",
+      "marketId": "540816",
+      "marketName": "What will happen before GTA VI? - Russia-Ukraine Ceasefire",
+      "side": "long",
+      "entryPrice": 0.64,
+      "currentPrice": 0.64,
+      "collateral": 64,
+      "leverage": 10,
+      "liquidationPrice": 0.5760000000000001,
+      "maintenanceMargin": null,
+      "userAddress": "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke",
+      "createdAt": "2025-12-05T21:32:57.407Z",
+      "status": "closed"
+    },
+    "pos_1764970575939_0u8y8jr38": {
+      "id": "pos_1764970575939_0u8y8jr38",
+      "marketId": "540816",
+      "marketName": "What will happen before GTA VI? - Russia-Ukraine Ceasefire",
+      "side": "long",
+      "entryPrice": 0.64,
+      "currentPrice": 0.64,
+      "collateral": 64,
+      "leverage": 4,
+      "liquidationPrice": 0.48,
+      "maintenanceMargin": null,
+      "userAddress": "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke",
+      "createdAt": "2025-12-05T21:36:15.939Z",
+      "status": "active"
+    },
+    "pos_1764970734194_3erhgfhx7": {
+      "id": "pos_1764970734194_3erhgfhx7",
+      "marketId": "540816",
+      "marketName": "What will happen before GTA VI? - Russia-Ukraine Ceasefire",
+      "side": "long",
+      "entryPrice": 0.64,
+      "currentPrice": 0.64,
+      "collateral": 64,
+      "leverage": 5,
+      "liquidationPrice": 0.512,
+      "maintenanceMargin": null,
+      "userAddress": "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke",
+      "createdAt": "2025-12-05T21:38:54.194Z",
+      "status": "active"
+    },
+    "pos_1764970936100_vy6xpcjxd": {
+      "id": "pos_1764970936100_vy6xpcjxd",
+      "marketId": "540816",
+      "marketName": "What will happen before GTA VI? - Russia-Ukraine Ceasefire",
+      "side": "long",
+      "entryPrice": 0.635,
+      "currentPrice": 0.635,
+      "collateral": 63.5,
+      "leverage": 2,
+      "liquidationPrice": 0.3175,
+      "maintenanceMargin": null,
+      "userAddress": "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke",
+      "createdAt": "2025-12-05T21:42:16.100Z",
+      "status": "active"
+    },
+    "pos_1764971193472_flf4biync": {
+      "id": "pos_1764971193472_flf4biync",
+      "marketId": "540816",
+      "marketName": "What will happen before GTA VI? - Russia-Ukraine Ceasefire",
+      "side": "long",
+      "entryPrice": 0.635,
+      "currentPrice": 0.635,
+      "collateral": 31.75,
+      "leverage": 2,
+      "liquidationPrice": 0.3175,
+      "maintenanceMargin": null,
+      "userAddress": "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke",
+      "createdAt": "2025-12-05T21:46:33.472Z",
+      "status": "active"
+    }
+  },
+  "userPositions": {
+    "HrVyo43JExgjhyJ4ewjXudhs22g7r5EVm1ozToZTSnke": [
+      "pos_1764970310487_qh6hr5t7r",
+      "pos_1764970377407_nbpfedh8k",
+      "pos_1764970575939_0u8y8jr38",
+      "pos_1764970734194_3erhgfhx7",
+      "pos_1764970936100_vy6xpcjxd",
+      "pos_1764971193472_flf4biync"
+    ]
+  },
+  "metadata": {
+    "lastUpdated": "2025-12-05T21:49:04.514Z",
+    "version": "1.0.0"
+  }
+}
