@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Home, TrendingUp, Wallet, Settings, Menu, X, Zap } from "lucide-react"
+import { Home, TrendingUp, Wallet, Settings, Menu, X, Zap, ArrowDownUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
+import { useWallet } from '@solana/wallet-adapter-react'
 import { Card } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
@@ -35,6 +36,7 @@ interface Position {
 
 
 export default function PolyLeverage() {
+  const { publicKey, connected } = useWallet()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [currentPage, setCurrentPage] = useState<"dashboard" | "markets" | "portfolio" | "settings">("dashboard")
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null)
@@ -47,6 +49,11 @@ export default function PolyLeverage() {
   const [markets, setMarkets] = useState<Market[]>([])
   const [loadingMarkets, setLoadingMarkets] = useState(false)
   const [analyzingMarket, setAnalyzingMarket] = useState(false)
+  const [userPositions, setUserPositions] = useState<any[]>([])
+  const [loadingPositions, setLoadingPositions] = useState(false)
+  const [depositAmount, setDepositAmount] = useState("")
+  const [bridging, setBridging] = useState(false)
+  const [bridgeQuote, setBridgeQuote] = useState<any>(null)
   const { toast } = useToast()
 
   const handleAnalyzeMarket = async () => {
@@ -138,8 +145,18 @@ export default function PolyLeverage() {
   useEffect(() => {
     if (currentPage === "markets") {
       fetchMarkets()
+    } else if (currentPage === "portfolio" && connected && publicKey) {
+      fetchUserPositions()
     }
-  }, [currentPage])
+  }, [currentPage, connected, publicKey])
+
+  useEffect(() => {
+    if (depositAmount && parseFloat(depositAmount) > 0) {
+      fetchBridgeQuote()
+    } else {
+      setBridgeQuote(null)
+    }
+  }, [depositAmount])
 
   const fetchMarkets = async () => {
     setLoadingMarkets(true)
@@ -155,6 +172,97 @@ export default function PolyLeverage() {
       console.error('Error fetching markets:', error)
     } finally {
       setLoadingMarkets(false)
+    }
+  }
+
+  const fetchUserPositions = async () => {
+    if (!publicKey) return
+    
+    setLoadingPositions(true)
+    try {
+      const response = await fetch(`/api/polymarket/positions?address=${publicKey.toString()}`)
+      if (response.ok) {
+        const data = await response.json()
+        setUserPositions(data.positions || [])
+      } else {
+        console.error('Failed to fetch positions')
+      }
+    } catch (error) {
+      console.error('Error fetching positions:', error)
+    } finally {
+      setLoadingPositions(false)
+    }
+  }
+
+  const fetchBridgeQuote = async () => {
+    const amount = parseFloat(depositAmount)
+    if (isNaN(amount) || amount <= 0) return
+
+    try {
+      const response = await fetch(`/api/bridge/quote?amount=${amount}`)
+      if (response.ok) {
+        const quote = await response.json()
+        setBridgeQuote(quote)
+      }
+    } catch (error) {
+      console.error('Error fetching bridge quote:', error)
+    }
+  }
+
+  const handleBridge = async () => {
+    if (!connected || !publicKey) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your Solana wallet first",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const amount = parseFloat(depositAmount)
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setBridging(true)
+    try {
+      const response = await fetch('/api/bridge/sol-to-polygon', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          solAddress: publicKey.toString(),
+          polygonAddress: publicKey.toString(),
+          amount,
+          signature: 'mock_signature_' + Date.now()
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast({
+          title: "Bridge Initiated",
+          description: `Bridging ${amount} SOL to Polygon. Transaction ID: ${data.transaction.id}`,
+        })
+        setDepositAmount('')
+        setBridgeQuote(null)
+      } else {
+        throw new Error('Bridge failed')
+      }
+    } catch (error) {
+      toast({
+        title: "Bridge Failed",
+        description: error instanceof Error ? error.message : "Failed to bridge assets",
+        variant: "destructive",
+      })
+    } finally {
+      setBridging(false)
     }
   }
 
@@ -518,18 +626,136 @@ export default function PolyLeverage() {
           )}
 
           {currentPage === "portfolio" && (
-            <div className="text-center py-12">
-              <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Portfolio</h3>
-              <p className="text-muted-foreground">Connect your wallet to view your positions</p>
+            <div className="space-y-6">
+              {!connected ? (
+                <div className="text-center py-12">
+                  <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-xl font-bold mb-2">Portfolio</h3>
+                  <p className="text-muted-foreground mb-4">Connect your wallet to view your positions</p>
+                  <WalletMultiButton />
+                </div>
+              ) : (
+                <>
+                  <Card className="bg-card border-zinc-800 p-6">
+                    <h3 className="text-lg font-bold mb-4">Polymarket Positions</h3>
+                    {loadingPositions ? (
+                      <p className="text-center py-8 text-muted-foreground">Loading positions...</p>
+                    ) : userPositions.length === 0 ? (
+                      <p className="text-center py-8 text-muted-foreground">No positions found</p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-zinc-800">
+                              <th className="text-left py-3 px-4 text-xs text-muted-foreground font-mono">Market</th>
+                              <th className="text-left py-3 px-4 text-xs text-muted-foreground font-mono">Side</th>
+                              <th className="text-left py-3 px-4 text-xs text-muted-foreground font-mono">Size</th>
+                              <th className="text-left py-3 px-4 text-xs text-muted-foreground font-mono">Price</th>
+                              <th className="text-left py-3 px-4 text-xs text-muted-foreground font-mono">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {userPositions.map((pos: any) => (
+                              <tr key={pos.id} className="border-b border-zinc-800 hover:bg-accent/50">
+                                <td className="py-4 px-4 font-mono text-xs">{pos.market}</td>
+                                <td className="py-4 px-4 font-mono text-sm">
+                                  <span className={`font-bold ${pos.side === "long" ? "text-primary" : "text-secondary"}`}>
+                                    {pos.side.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="py-4 px-4 font-mono text-xs">{pos.size}</td>
+                                <td className="py-4 px-4 font-mono text-xs">${pos.price.toFixed(3)}</td>
+                                <td className="py-4 px-4 font-mono text-sm">
+                                  <span className="text-primary">{pos.status.toUpperCase()}</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    <Button 
+                      onClick={fetchUserPositions}
+                      disabled={loadingPositions}
+                      variant="outline"
+                      size="sm"
+                      className="mt-4"
+                    >
+                      {loadingPositions ? "Loading..." : "Refresh"}
+                    </Button>
+                  </Card>
+                </>
+              )}
             </div>
           )}
 
           {currentPage === "settings" && (
-            <div className="text-center py-12">
-              <Settings className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-bold mb-2">Settings</h3>
-              <p className="text-muted-foreground">Coming soon</p>
+            <div className="space-y-6">
+              <Card className="bg-card border-zinc-800 p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <ArrowDownUp className="w-5 h-5 text-primary" />
+                  <h3 className="text-lg font-bold">Bridge SOL to Polygon</h3>
+                </div>
+                
+                {!connected ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground mb-4">Connect your wallet to bridge assets</p>
+                    <WalletMultiButton />
+                  </div>
+                ) : (
+                  <div className="max-w-md space-y-6">
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-2 block">Amount (SOL)</label>
+                      <Input
+                        type="number"
+                        placeholder="0.0"
+                        value={depositAmount}
+                        onChange={(e) => setDepositAmount(e.target.value)}
+                        className="bg-accent border-zinc-700 font-mono h-12"
+                      />
+                    </div>
+
+                    {bridgeQuote && (
+                      <div className="bg-accent border border-zinc-800 rounded p-4 space-y-3">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">You Send</span>
+                          <span className="font-mono">{bridgeQuote.inputAmount} SOL</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Bridge Fee</span>
+                          <span className="font-mono">{bridgeQuote.bridgeFee.toFixed(4)} SOL</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Gas Fee</span>
+                          <span className="font-mono">{bridgeQuote.gasFee.toFixed(4)} SOL</span>
+                        </div>
+                        <div className="border-t border-zinc-700 pt-3 flex justify-between">
+                          <span className="text-muted-foreground">You Receive</span>
+                          <span className="font-mono font-bold text-primary">{bridgeQuote.outputAmount.toFixed(2)} USDC</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Estimated Time</span>
+                          <span>{Math.floor(bridgeQuote.estimatedTime / 60)} minutes</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleBridge}
+                      disabled={bridging || !depositAmount || parseFloat(depositAmount) <= 0}
+                      className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
+                    >
+                      {bridging ? "Bridging..." : "Bridge to Polygon"}
+                    </Button>
+
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>1. Bridge converts SOL to USDC on Polygon</p>
+                      <p>2. USDC will be available for trading on Polymarket</p>
+                      <p>3. Transaction typically completes in 10-15 minutes</p>
+                    </div>
+                  </div>
+                )}
+              </Card>
             </div>
           )}
         </div>
