@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const WORMHOLE_API = 'https://api.wormholescan.io'
+import { createBridgeInstance } from '@/lib/wormhole-bridge'
 
 interface BridgeRequest {
   solAddress: string
   polygonAddress: string
   amount: number
-  signature: string
+  transactionSignature?: string
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: BridgeRequest = await request.json()
-    const { solAddress, polygonAddress, amount, signature } = body
+    const { solAddress, polygonAddress, amount, transactionSignature } = body
 
-    if (!solAddress || !polygonAddress || !amount || !signature) {
+    if (!solAddress || !polygonAddress || !amount) {
       return NextResponse.json(
-        { error: 'Missing required fields: solAddress, polygonAddress, amount, signature' },
+        { error: 'Missing required fields: solAddress, polygonAddress, amount' },
         { status: 400 }
       )
     }
@@ -28,42 +27,78 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('Initiating bridge:', {
+    const bridge = createBridgeInstance('Mainnet')
+
+    console.log('Initiating Wormhole bridge:', {
       from: solAddress,
       to: polygonAddress,
       amount,
-      timestampVerified: Date.now()
+      timestamp: Date.now()
     })
 
-    const bridgeTransaction = {
-      id: `bridge_${Date.now()}_${Math.random().toString(36).substring(7)}`,
-      status: 'pending',
-      sourceChain: 'solana',
-      targetChain: 'polygon',
-      sourceAddress: solAddress,
-      targetAddress: polygonAddress,
-      amount,
-      estimatedTime: 900,
-      fee: amount * 0.001,
-      netAmount: amount * 0.999,
-      createdAt: new Date().toISOString()
+    const fees = await bridge.estimateFees('Solana', 'Polygon')
+    const totalFees = parseFloat(fees.relayerFee) + parseFloat(fees.estimatedGas)
+
+    if (!transactionSignature) {
+      return NextResponse.json({
+        success: true,
+        requiresSignature: true,
+        transaction: {
+          id: `bridge_prepare_${Date.now()}`,
+          sourceChain: 'Solana',
+          targetChain: 'Polygon',
+          sourceAddress: solAddress,
+          targetAddress: polygonAddress,
+          amount,
+          estimatedTime: 900,
+          relayerFee: fees.relayerFee,
+          gasFee: fees.estimatedGas,
+          totalFees,
+          netAmount: amount - totalFees,
+          status: 'awaiting_signature'
+        },
+        message: 'Transaction prepared. Please sign in your wallet.',
+      })
     }
+
+    const transferResult = await bridge.transferTokens({
+      fromAddress: solAddress,
+      toAddress: polygonAddress,
+      amount,
+      fromChain: 'Solana',
+      toChain: 'Polygon'
+    })
 
     return NextResponse.json({
       success: true,
-      transaction: bridgeTransaction,
-      message: 'Bridge transaction initiated. Please approve in your wallet.',
+      transaction: {
+        id: transactionSignature,
+        status: 'processing',
+        sourceChain: 'Solana',
+        targetChain: 'Polygon',
+        sourceAddress: solAddress,
+        targetAddress: polygonAddress,
+        amount,
+        estimatedTime: 900,
+        totalFees,
+        netAmount: amount - totalFees,
+        createdAt: new Date().toISOString()
+      },
+      message: 'Bridge transaction submitted. Waiting for VAA attestation.',
       nextSteps: [
-        'Approve SOL transfer on Solana',
-        'Wait for bridge confirmation (10-15 mins)',
-        'USDC will arrive on Polygon address'
+        'Transaction submitted to Solana',
+        'Waiting for Wormhole guardian signatures',
+        'Will be redeemable on Polygon in 10-15 minutes'
       ]
     })
 
   } catch (error) {
     console.error('Bridge error:', error)
     return NextResponse.json(
-      { error: 'Failed to initiate bridge transaction' },
+      { 
+        error: 'Failed to initiate bridge transaction',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }
@@ -73,6 +108,7 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const txId = searchParams.get('txId')
+    const sourceChain = searchParams.get('sourceChain') as 'Solana' | 'Polygon' || 'Solana'
 
     if (!txId) {
       return NextResponse.json(
@@ -81,21 +117,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const mockStatus = {
-      id: txId,
-      status: 'completed',
-      sourceChain: 'solana',
-      targetChain: 'polygon',
-      confirmations: 15,
-      estimatedCompletion: new Date(Date.now() + 300000).toISOString()
-    }
+    const bridge = createBridgeInstance('Mainnet')
+    const status = await bridge.getTransferStatus(txId, sourceChain)
 
-    return NextResponse.json(mockStatus)
+    return NextResponse.json({
+      id: txId,
+      ...status,
+      sourceChain,
+      targetChain: sourceChain === 'Solana' ? 'Polygon' : 'Solana',
+      timestamp: new Date().toISOString()
+    })
 
   } catch (error) {
     console.error('Status check error:', error)
     return NextResponse.json(
-      { error: 'Failed to check transaction status' },
+      { 
+        error: 'Failed to check transaction status',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     )
   }

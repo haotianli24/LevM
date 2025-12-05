@@ -25,10 +25,16 @@ export async function POST(request: NextRequest) {
     let slug = ''
     let conditionId = ''
     let type: 'event' | 'market' = 'market'
+    let marketSlug = ''
 
     if (pathParts[0] === 'event' && pathParts[1]) {
       slug = pathParts[1]
       type = 'event'
+      if (pathParts[2]) {
+        marketSlug = pathParts[2]
+        slug = marketSlug
+        type = 'market'
+      }
     } else if (pathParts[0] === 'market' && pathParts[1]) {
       slug = pathParts[1]
       type = 'market'

@@ -72,10 +72,13 @@ plvScore = round(priceScore * 0.3 + volumeScore * 0.3 + liquidityScore * 0.4)
 ## Bridge Flow
 
 1. User enters SOL amount to deposit
-2. System fetches bridge quote (fees, output amount, estimated time)
-3. User approves bridge transaction
-4. SOL is converted to USDC on Polygon
-5. USDC becomes available for Polymarket trading
+2. System fetches real-time bridge quote from Wormhole
+3. User signs Solana transaction in wallet
+4. Transaction submitted to Wormhole guardian network
+5. VAA attestation generated (10-15 minutes)
+6. USDC redeemable on Polygon for Polymarket trading
+
+See `BRIDGE_IMPLEMENTATION.md` for technical details.
 
 ## Tech Stack
 

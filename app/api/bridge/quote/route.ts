@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createBridgeInstance } from '@/lib/wormhole-bridge'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,26 +13,29 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const bridgeFeePercent = 0.001
-    const gasFee = 0.01
+    const bridge = createBridgeInstance('Mainnet')
+    const fees = await bridge.estimateFees('Solana', 'Polygon')
     
-    const bridgeFee = amount * bridgeFeePercent
-    const totalFees = bridgeFee + gasFee
+    const relayerFee = parseFloat(fees.relayerFee)
+    const gasFee = parseFloat(fees.estimatedGas)
+    const totalFees = relayerFee + gasFee
     const netAmount = amount - totalFees
+
+    const solToUsdcRate = 150
 
     const quote = {
       inputAmount: amount,
       inputToken: 'SOL',
-      outputAmount: netAmount * 150,
+      outputAmount: netAmount * solToUsdcRate,
       outputToken: 'USDC',
-      bridgeFee,
-      gasFee,
+      bridgeFee: relayerFee,
+      gasFee: gasFee,
       totalFees,
       estimatedTime: 900,
       route: [
         { chain: 'Solana', token: 'SOL', amount },
         { chain: 'Wormhole Bridge', action: 'bridge' },
-        { chain: 'Polygon', token: 'USDC', amount: netAmount * 150 }
+        { chain: 'Polygon', token: 'USDC', amount: netAmount * solToUsdcRate }
       ],
       expiresAt: new Date(Date.now() + 300000).toISOString()
     }
