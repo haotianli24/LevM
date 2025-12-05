@@ -477,13 +477,13 @@ export default function MarketDetailPage() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Yes</span>
-                      <span className="text-sm font-mono text-primary">
+                      <span className="text-sm font-mono text-green-500">
                         {(submarket.yesPrice * 100).toFixed(0)}¢
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">No</span>
-                      <span className="text-sm font-mono text-secondary">
+                      <span className="text-sm font-mono text-red-500">
                         {(submarket.noPrice * 100).toFixed(0)}¢
                       </span>
                     </div>
@@ -516,16 +516,16 @@ export default function MarketDetailPage() {
                 )}
                 <div className="flex items-center gap-4 mb-4">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-primary"></div>
-                    <span className="text-sm">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="text-sm text-green-500">
                       Yes {isEvent && selectedSubmarket 
                         ? (selectedSubmarket.yesPrice * 100).toFixed(1)
                         : (market.oraclePrice * 100).toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-secondary"></div>
-                    <span className="text-sm">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span className="text-sm text-red-500">
                       No {isEvent && selectedSubmarket 
                         ? (selectedSubmarket.noPrice * 100).toFixed(1)
                         : ((1 - market.oraclePrice) * 100).toFixed(1)}%
@@ -710,9 +710,7 @@ export default function MarketDetailPage() {
                   className={`w-full h-14 text-lg font-semibold ${
                     selectedPriceOption === "yes"
                       ? "bg-green-600 hover:bg-green-700 text-white"
-                      : marketSide === "buy"
-                      ? "bg-secondary hover:bg-secondary/90 text-black"
-                      : "bg-accent hover:bg-accent/80 text-foreground"
+                      : "bg-accent hover:bg-accent/80 text-green-500"
                   }`}
                   onClick={() => {
                     const price = isEvent && selectedSubmarket 
@@ -730,9 +728,7 @@ export default function MarketDetailPage() {
                   className={`w-full h-14 text-lg font-semibold ${
                     selectedPriceOption === "no"
                       ? "bg-red-600 hover:bg-red-700 text-white"
-                      : marketSide === "sell"
-                      ? "bg-secondary hover:bg-secondary/90 text-secondary-foreground"
-                      : "bg-accent hover:bg-accent/80 text-foreground"
+                      : "bg-accent hover:bg-accent/80 text-red-500"
                   }`}
                   onClick={() => {
                     const price = isEvent && selectedSubmarket 

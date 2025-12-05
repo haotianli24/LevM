@@ -108,64 +108,54 @@ export function PositionDetailDialog({
             </div>
           </Card>
 
-          {/* P&L Summary */}
-          <Card className={`rounded-none border-2 p-4 ${
-            pnl >= 0 ? "bg-green-500/10 border-green-500/30" : "bg-red-500/10 border-red-500/30"
-          }`}>
-            <h3 className="text-sm text-muted-foreground mb-2">Profit & Loss</h3>
-            <div className="flex items-end gap-4">
+          {/* Price Information with P&L */}
+          <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
+            <h3 className="text-sm font-semibold mb-3">Price & Performance</h3>
+            <div className="grid grid-cols-3 gap-6">
               <div>
-                <p className={`text-3xl font-bold font-mono ${pnl >= 0 ? "text-green-500" : "text-red-500"}`}>
-                  {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}%
-                </p>
-                <p className={`text-lg font-mono ${pnl >= 0 ? "text-green-500/70" : "text-red-500/70"}`}>
-                  ${pnlAmount >= 0 ? "+" : ""}{pnlAmount.toFixed(2)}
-                </p>
+                <h4 className="text-xs text-muted-foreground mb-1">Entry Price</h4>
+                <p className="text-lg font-bold font-mono">${position.entryPrice.toFixed(4)}</p>
+              </div>
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">Current Price</h4>
+                <p className="text-lg font-bold font-mono">${position.currentPrice.toFixed(4)}</p>
+                <div className="mt-2">
+                  <p className={`text-sm font-bold font-mono ${pnl >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {pnl >= 0 ? "+" : ""}{pnl.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">Liquidation Price</h4>
+                <p className="text-lg font-bold font-mono text-red-400">${position.liquidationPrice.toFixed(4)}</p>
               </div>
             </div>
           </Card>
 
-          {/* Price Information */}
-          <div className="grid grid-cols-3 gap-4">
-            <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
-              <h3 className="text-xs text-muted-foreground mb-1">Entry Price</h3>
-              <p className="text-lg font-bold font-mono">${position.entryPrice.toFixed(4)}</p>
-            </Card>
-            <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
-              <h3 className="text-xs text-muted-foreground mb-1">Current Price</h3>
-              <p className="text-lg font-bold font-mono">${position.currentPrice.toFixed(4)}</p>
-            </Card>
-            <Card className="rounded-none bg-red-500/10 border-red-500/30 border p-4">
-              <h3 className="text-xs text-muted-foreground mb-1">Liquidation Price</h3>
-              <p className="text-lg font-bold font-mono text-red-400">${position.liquidationPrice.toFixed(4)}</p>
-            </Card>
-          </div>
-
-          {/* Position Metrics */}
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
-              <h3 className="text-xs text-muted-foreground mb-1">Position Size</h3>
-              <p className="text-xl font-bold font-mono">${positionSize.toFixed(2)}</p>
-            </Card>
-            <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
-              <h3 className="text-xs text-muted-foreground mb-1">Collateral</h3>
-              <p className="text-xl font-bold font-mono">${position.collateral.toFixed(2)}</p>
-            </Card>
-          </div>
-
-          {/* Leverage & Risk */}
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
-              <h3 className="text-xs text-muted-foreground mb-1">Leverage</h3>
-              <p className="text-xl font-bold font-mono">{position.leverage}x</p>
-            </Card>
-            <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
-              <h3 className="text-xs text-muted-foreground mb-1">Margin Ratio</h3>
-              <p className="text-xl font-bold font-mono">
-                {position.marginRatio !== undefined ? `${position.marginRatio.toFixed(2)}%` : "N/A"}
-              </p>
-            </Card>
-          </div>
+          {/* Position Metrics - All in One Box */}
+          <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">
+            <h3 className="text-sm font-semibold mb-3">Position Metrics</h3>
+            <div className="grid grid-cols-4 gap-4">
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">Position Size</h4>
+                <p className="text-xl font-bold font-mono">${positionSize.toFixed(2)}</p>
+              </div>
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">Collateral</h4>
+                <p className="text-xl font-bold font-mono">${position.collateral.toFixed(2)}</p>
+              </div>
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">Leverage</h4>
+                <p className="text-xl font-bold font-mono">{position.leverage}x</p>
+              </div>
+              <div>
+                <h4 className="text-xs text-muted-foreground mb-1">Margin Ratio</h4>
+                <p className="text-xl font-bold font-mono">
+                  {position.marginRatio !== undefined ? `${position.marginRatio.toFixed(2)}%` : "N/A"}
+                </p>
+              </div>
+            </div>
+          </Card>
 
           {/* Health & Liquidation Risk */}
           <Card className="rounded-none bg-accent/50 border-zinc-800 p-4">

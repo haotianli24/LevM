@@ -146,16 +146,20 @@ export default function MarketsPage() {
                   </div>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Volume</span>
-                      <span className="font-mono text-primary">${(market.volume || 0).toLocaleString()}</span>
+                      <span className="text-muted-foreground">Yes</span>
+                      <span className="font-mono text-green-500">{((market.oraclePrice || 0) * 100).toFixed(0)}¢</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Avg Price</span>
-                      <span className="font-mono">{((market.oraclePrice || 0) * 100).toFixed(0)}¢</span>
+                      <span className="text-muted-foreground">No</span>
+                      <span className="font-mono text-red-500">{((1 - (market.oraclePrice || 0)) * 100).toFixed(0)}¢</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Volume</span>
+                      <span className="font-mono">${(market.volume || 0).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">24h Change</span>
-                      <span className={`font-mono ${(market.change24h || 0) >= 0 ? "text-primary" : "text-secondary"}`}>
+                      <span className={`font-mono ${(market.change24h || 0) >= 0 ? "text-green-500" : "text-red-500"}`}>
                         {(market.change24h || 0) >= 0 ? "+" : ""}
                         {(market.change24h || 0).toFixed(2)}%
                       </span>
