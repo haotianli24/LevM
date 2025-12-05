@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Home, TrendingUp, Wallet, Settings, Menu, X, Zap, ArrowDownUp } from "lucide-react"
+import { Home, TrendingUp, Wallet, Coins, Menu, X, Zap, ArrowDownUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'
@@ -40,7 +40,7 @@ interface Position {
 export default function PolyLeverage() {
   const { publicKey, connected } = useWallet()
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [currentPage, setCurrentPage] = useState<"dashboard" | "markets" | "portfolio" | "settings">("markets")
+  const [currentPage, setCurrentPage] = useState<"dashboard" | "markets" | "portfolio" | "stake">("markets")
   const [selectedMarket, setSelectedMarket] = useState<Market | null>(null)
   const [polymarketUrl, setPolymarketUrl] = useState("")
   const [selectedTab, setSelectedTab] = useState<"long" | "short">("long")
@@ -56,6 +56,26 @@ export default function PolyLeverage() {
   const [depositAmount, setDepositAmount] = useState("")
   const [bridging, setBridging] = useState(false)
   const [bridgeQuote, setBridgeQuote] = useState<any>(null)
+  const [stakeAmount, setStakeAmount] = useState("")
+  const [staking, setStaking] = useState(false)
+  const [stakedBalance, setStakedBalance] = useState(0)
+  const [apy, setApy] = useState(12.5)
+  
+  // Staking pools data
+  const stakingPools = [
+    { asset: "SOL", tvl: 3000000, apy: 12.5 },
+    { asset: "USDC", tvl: 850000, apy: 8.2 },
+  ]
+
+  // Format TVL amount
+  const formatTVL = (amount: number) => {
+    if (amount >= 1000000) {
+      return `$${(amount / 1000000).toFixed(1)}M`
+    } else if (amount >= 1000) {
+      return `$${(amount / 1000).toFixed(0)}K`
+    }
+    return `$${amount.toLocaleString()}`
+  }
   const [searchQuery, setSearchQuery] = useState("")
   const [walletBalance, setWalletBalance] = useState(0)
   const [pnlTimeframe, setPnlTimeframe] = useState<"24h" | "7d" | "30d">("24h")
@@ -343,8 +363,8 @@ export default function PolyLeverage() {
 
   const navItems = [
     { id: "markets", label: "Markets", icon: TrendingUp },
+    { id: "stake", label: "Stake", icon: Coins },
     { id: "portfolio", label: "Portfolio", icon: Wallet },
-    { id: "settings", label: "Settings", icon: Settings },
   ]
 
   return (
@@ -405,7 +425,7 @@ export default function PolyLeverage() {
               {currentPage === "dashboard" && "Dashboard"}
               {currentPage === "markets" && "Markets"}
               {currentPage === "portfolio" && "Portfolio"}
-              {currentPage === "settings" && "Settings"}
+              {currentPage === "stake" && "Stake"}
             </h2>
           </div>
           <div className="wallet-button-wrapper">
@@ -874,75 +894,61 @@ export default function PolyLeverage() {
             </div>
           )}
 
-          {currentPage === "settings" && (
+          {currentPage === "stake" && (
             <div className="space-y-6">
-              <Card className="bg-card border-zinc-800 p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <ArrowDownUp className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg font-bold">Bridge SOL to Polygon</h3>
-                </div>
-
-                {!connected ? (
-                  <div className="text-center py-8">
-                    <p className="text-muted-foreground mb-4">Connect your wallet to bridge assets</p>
-                    <div className="wallet-button-wrapper">
-                      <WalletMultiButton>{!connected ? "Connect Wallet" : undefined}</WalletMultiButton>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="max-w-md space-y-6">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-2 block">Amount (SOL)</label>
-                      <Input
-                        type="number"
-                        placeholder="0.0"
-                        value={depositAmount}
-                        onChange={(e) => setDepositAmount(e.target.value)}
-                        className="bg-accent border-zinc-700 font-mono h-12"
-                      />
-                    </div>
-
-                    {bridgeQuote && (
-                      <div className="bg-accent border border-zinc-800 rounded p-4 space-y-3">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">You Send</span>
-                          <span className="font-mono">{bridgeQuote.inputAmount} SOL</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Bridge Fee</span>
-                          <span className="font-mono">{bridgeQuote.bridgeFee.toFixed(4)} SOL</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Gas Fee</span>
-                          <span className="font-mono">{bridgeQuote.gasFee.toFixed(4)} SOL</span>
-                        </div>
-                        <div className="border-t border-zinc-700 pt-3 flex justify-between">
-                          <span className="text-muted-foreground">You Receive</span>
-                          <span className="font-mono font-bold text-primary">{bridgeQuote.outputAmount.toFixed(2)} USDC</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-muted-foreground">
-                          <span>Estimated Time</span>
-                          <span>{Math.floor(bridgeQuote.estimatedTime / 60)} minutes</span>
-                        </div>
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handleBridge}
-                      disabled={bridging || !depositAmount || parseFloat(depositAmount) <= 0}
-                      className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                    >
-                      {bridging ? "Bridging..." : "Bridge to Polygon"}
-                    </Button>
-
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p>1. Bridge converts SOL to USDC on Polygon</p>
-                      <p>2. USDC will be available for trading on Polymarket</p>
-                      <p>3. Transaction typically completes in 10-15 minutes</p>
-                    </div>
-                  </div>
-                )}
-              </Card>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-zinc-800">
+                      <th className="text-left py-4 px-4 text-xs text-muted-foreground font-mono uppercase">Asset</th>
+                      <th className="text-left py-4 px-4 text-xs text-muted-foreground font-mono uppercase">TVL</th>
+                      <th className="text-left py-4 px-4 text-xs text-muted-foreground font-mono uppercase">APY</th>
+                      <th className="text-left py-4 px-4 text-xs text-muted-foreground font-mono uppercase"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stakingPools.map((pool) => (
+                      <tr key={pool.asset} className="border-b border-zinc-800 hover:bg-accent/50">
+                        <td className="py-4 px-4">
+                          <span className="font-mono font-semibold text-base">{pool.asset}</span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="font-mono">
+                            {formatTVL(pool.tvl)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className="font-mono text-primary font-semibold">
+                            {pool.apy}%
+                          </span>
+                        </td>
+                        <td className="py-4 px-4">
+                          <Button
+                            onClick={() => {
+                              if (!connected) {
+                                toast({
+                                  title: "Wallet Not Connected",
+                                  description: "Please connect your wallet to stake",
+                                  variant: "destructive",
+                                })
+                                return
+                              }
+                              toast({
+                                title: "Stake",
+                                description: `Stake ${pool.asset} coming soon!`,
+                              })
+                            }}
+                            size="sm"
+                            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                          >
+                            Stake
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
