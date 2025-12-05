@@ -48,7 +48,6 @@
     "@wormhole-foundation/sdk": "^4.3.0",
     "@wormhole-foundation/sdk-evm": "^4.3.0",
     "@wormhole-foundation/sdk-solana": "^4.3.0",
-    "@polymarket/clob-client": "^7.5.0",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
